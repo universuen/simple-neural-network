@@ -28,7 +28,6 @@ def mt_v_mul(m: list, v: list) -> list:
     return result
 
 
-
 # 激活函数
 def sigmoid(x: float) -> float:
     return 1/(1 + math.exp(-x))
