@@ -35,7 +35,7 @@ def sigmoid(x: float) -> float:
 
 # 激活函数的导函数
 def d_sigmoid(x: float) -> float:
-    return math.exp(-x)/(1 + math.exp(-x))**2
+    return math.exp(-x)/((1 + math.exp(-x))**2)
 
 
 # 代价函数
