@@ -38,6 +38,11 @@ def d_sigmoid(x: float) -> float:
     return 1/(1 + math.exp(-x))**2
 
 
+# 激活函数的反函数
+def anti_sigmoid(y: float) -> float:
+    return -math.log((1/y) - 1)
+
+
 # 代价函数
 def cost(y: list, a: list) -> float:
     assert len(y) == len(a)
@@ -52,7 +57,7 @@ def d_cost(y: list, a: list) -> list:
     assert len(y) == len(a)
     result = []
     for i, j in zip(y, a):
-        result.append(j - a)
+        result.append(j - i)
     return result
 
 
@@ -62,6 +67,7 @@ class Neu:
         self.n = inputs_number  # 输入值个数
         self.b = b  # 偏置值
         self.w = list(w)  # 权重值
+        self.z = -1;  # 存储最近一次的输入值
         self.store = -1  # 存储最近一次的激活值
         assert len(self.w) <= inputs_number
         if len(self.w) < inputs_number:
@@ -71,13 +77,14 @@ class Neu:
 # 激活一次神经元
     def activate(self, x: list) -> float:
         assert self.n == len(x)
-        self.store = dot(x, self.w) + self.b
-        return sigmoid(self.store)  # 返回神经元激活值
+        self.z = dot(x, self.w) + self.b
+        self.store = sigmoid(self.z)
+        return self.store  # 返回神经元激活值
 
 
 # 神经网络
 class NetWork:
-    def __init__(self, rate: float, *number):
+    def __init__(self, number: list, rate: float, ):
         number = list(number)
         self.rate = rate  # 设置学习步长
         self.layer_number = len(number)  # 神经网络层数
@@ -95,8 +102,8 @@ class NetWork:
 # 反向传播
     def backward(self, answers: list, original_data: list):
         assert len(answers) == len(self.neus[self.layer_number - 1])
-        temp = [d_sigmoid(i.store) for i in self.neus[self.layer_number - 2]]  # sigmoid函数无法直接对向量运算， 因此这里使用temp作为过渡
-        delta = [i * j for i, j in zip(d_cost(answers, self.activate(original_data)), temp)]  # 激活一次神经网络计算输出层误差
+        temp = [d_sigmoid(i.z) for i in self.neus[self.layer_number - 1]]  # sigmoid函数无法直接对向量运算， 因此这里使用temp作为过渡
+        delta = [i * j for i, j in zip(d_cost(answers, self.activate(original_data)), temp)]  # 激活一次神经网络并计算输出层误差
         # 调整输出层的b, w
         for i, j in zip(delta, self.neus[self.layer_number - 1]):
             j.b = j.b - self.rate * i
@@ -104,25 +111,25 @@ class NetWork:
                 j.w[k] = j.w[k] - self.rate * i * self.neus[self.layer_number - 2][k].store
         #  反向传播，迭代调整每一层的b, 输入层单独处理
         for i in range(self.layer_number - 2, 0, -1):
-            # 由前一层误差计算本层误差
-            # 首先获取前一层的w矩阵
+            # 由上一层误差计算本层误差
+            # 首先获取上一层的w矩阵
             w_m = [j.w for j in self.neus[i + 1]]
             # 然后算w_m的转置矩阵与上一层误差向量的乘积
             delta = mt_v_mul(w_m, delta)
-            # 最后deltal与本层输入向量(也就是上一层的输出向量)作Hardamard积得到本层误差
-            temp = [d_sigmoid(k.store) for k in self.neus[i - 1]]
+            # 最后deltal与本层输入向量作Hardamard积得到本层误差
+            temp = [d_sigmoid(k.z) for k in self.neus[i]]
             delta = [i1 * j1 for i1, j1 in zip(delta, temp)]
             # 调整本层的b, w
             for i1, j1 in zip(delta, self.neus[i]):
                 j1.b = j1.b - self.rate * i1
                 for k1 in range(j1.n):
-                    j1.w[k1] = j1.w[k1] - self.rate * i1 * self.neus[i - 1][k1].store
-        # 最后调整输入层的b,w
+                    j1.w[k1] = j1.w[k1] - self.rate * i1 * self.neus[i - 1][k1].z
+        # 调整输入层的b, w
         w_m = [j.w for j in self.neus[1]]
         delta = mt_v_mul(w_m, delta)
-        temp = [d_sigmoid(k.store) for k in original_data]
+        temp = [d_sigmoid(k.z) for k in self.neus[0]]
         delta = [i * j for i, j in zip(delta, temp)]
-        for i, j in zip(delta, self.neus[0]):
-            j.b = j.b - self.rate * i
+        for i, j in zip(range(len(delta)), self.neus[0]):
+            j.b = j.b - self.rate * delta[i]
             for k in range(j.n):
-                j.w[k] = j.w[k] - self.rate * i * original_data[k]
+                j.w[k] = j.w[k] - self.rate * delta[i] * original_data[i]
