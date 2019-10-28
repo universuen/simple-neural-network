@@ -35,12 +35,7 @@ def sigmoid(x: float) -> float:
 
 # 激活函数的导函数
 def d_sigmoid(x: float) -> float:
-    return 1/(1 + math.exp(-x))**2
-
-
-# 激活函数的反函数
-def anti_sigmoid(y: float) -> float:
-    return -math.log((1/y) - 1)
+    return math.exp(-x)/(1 + math.exp(-x))**2
 
 
 # 代价函数
