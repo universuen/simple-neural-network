@@ -58,12 +58,12 @@ def d_cost(y: list, a: list) -> list:
 
 # 神经元
 class Neu:
-    def __init__(self, inputs_number: int, b=0, *w: float):
+    def __init__(self, inputs_number: int, b = 0, *w: float):
         self.n = inputs_number  # 输入值个数
         self.b = b  # 偏置值
         self.w = list(w)  # 权重值
-        self.z = -1;  # 存储最近一次的输入值
-        self.store = -1  # 存储最近一次的激活值
+        self.z = -1  # 存储最近一次的输入值
+        self.a = -1  # 存储最近一次的激活值
         assert len(self.w) <= inputs_number
         if len(self.w) < inputs_number:
             for i in range(inputs_number - len(self.w)):
@@ -73,8 +73,8 @@ class Neu:
     def activate(self, x: list) -> float:
         assert self.n == len(x)
         self.z = dot(x, self.w) + self.b
-        self.store = sigmoid(self.z)
-        return self.store  # 返回神经元激活值
+        self.a = sigmoid(self.z)
+        return self.a  # 返回神经元激活值
 
 
 # 神经网络
@@ -91,8 +91,8 @@ class NetWork:
             i.activate([j])
         for i in range(1, self.layer_number):  # 迭代激活各层神经元
             for j in self.neus[i]:
-                j.activate([self.neus[i-1][k].store for k in range(len(self.neus[i - 1]))])
-        return [self.neus[self.layer_number - 1][i].store for i in range(len(self.neus[self.layer_number - 1]))] # 返回包含网络输出值的列表
+                j.activate([self.neus[i-1][k].a for k in range(len(self.neus[i - 1]))])
+        return [self.neus[self.layer_number - 1][i].a for i in range(len(self.neus[self.layer_number - 1]))]  # 返回包含网络输出值的列表
 
 # 反向传播
     def backward(self, answers: list, original_data: list):
@@ -103,7 +103,7 @@ class NetWork:
         for i, j in zip(delta, self.neus[self.layer_number - 1]):
             j.b = j.b - self.rate * i
             for k in range(j.n):
-                j.w[k] = j.w[k] - self.rate * i * self.neus[self.layer_number - 2][k].store
+                j.w[k] = j.w[k] - self.rate * i * self.neus[self.layer_number - 2][k].a
         #  反向传播，迭代调整每一层的b, 输入层单独处理
         for i in range(self.layer_number - 2, 0, -1):
             # 由上一层误差计算本层误差
