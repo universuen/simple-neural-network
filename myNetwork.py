@@ -1,12 +1,12 @@
 import math
-
+import random
 
 # 一维向量点乘
 def dot(a: list, b: list) -> float:
     assert len(a) == len(b)
     result = 0
     for i, j in zip(a, b):
-        result += i * j
+        result = result + i * j
     return result
 
 
@@ -30,12 +30,16 @@ def mt_v_mul(m: list, v: list) -> list:
 
 # 激活函数
 def sigmoid(x: float) -> float:
-    return 1/(1 + math.exp(-x))
+    try:
+        ans = math.exp(-x)
+    except OverflowError:
+        return 1
+    return 1/(1 + ans)
 
 
 # 激活函数的导函数
 def d_sigmoid(x: float) -> float:
-    return math.exp(-x)/((1 + math.exp(-x))**2)
+    return sigmoid(x)*(1-sigmoid(x))
 
 
 # 代价函数
@@ -67,7 +71,7 @@ class Neu:
         assert len(self.w) <= inputs_number
         if len(self.w) < inputs_number:
             for i in range(inputs_number - len(self.w)):
-                self.w.append(0)
+                self.w.append(random.random()/10)
 
 # 激活一次神经元
     def activate(self, x: list) -> float:
@@ -92,7 +96,7 @@ class NetWork:
         for i in range(1, self.layer_number):  # 迭代激活各层神经元
             for j in self.neus[i]:
                 j.activate([self.neus[i-1][k].a for k in range(len(self.neus[i - 1]))])
-        return [self.neus[self.layer_number - 1][i].a for i in range(len(self.neus[self.layer_number - 1]))]  # 返回包含网络输出值的列表
+        return [i.a for i in self.neus[self.layer_number - 1]]  # 返回包含网络输出值的列表
 
 # 反向传播
     def backward(self, answers: list, original_data: list):
@@ -111,20 +115,20 @@ class NetWork:
             w_m = [j.w for j in self.neus[i + 1]]
             # 然后算w_m的转置矩阵与上一层误差向量的乘积
             delta = mt_v_mul(w_m, delta)
-            # 最后deltal与本层输入向量作Hardamard积得到本层误差
+            # 最后deltal与d_sigmoid(本层输出向量)作Hardamard积得到本层误差
             temp = [d_sigmoid(k.z) for k in self.neus[i]]
             delta = [i1 * j1 for i1, j1 in zip(delta, temp)]
             # 调整本层的b, w
             for i1, j1 in zip(delta, self.neus[i]):
                 j1.b = j1.b - self.rate * i1
                 for k1 in range(j1.n):
-                    j1.w[k1] = j1.w[k1] - self.rate * i1 * self.neus[i - 1][k1].z
+                    j1.w[k1] = j1.w[k1] - self.rate * i1 * self.neus[i - 1][k1].a
         # 调整输入层的b, w
         w_m = [j.w for j in self.neus[1]]
         delta = mt_v_mul(w_m, delta)
         temp = [d_sigmoid(k.z) for k in self.neus[0]]
         delta = [i * j for i, j in zip(delta, temp)]
-        for i, j in zip(range(len(delta)), self.neus[0]):
-            j.b = j.b - self.rate * delta[i]
+        for i, j in zip(delta, self.neus[0]):
+            j.b = j.b - self.rate * i
             for k in range(j.n):
-                j.w[k] = j.w[k] - self.rate * delta[i] * original_data[i]
+                j.w[k] = j.w[k] - self.rate * i * original_data[k]
